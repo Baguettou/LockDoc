@@ -1,9 +1,47 @@
+@import url('https://unpkg.com/@catppuccin/palette/css/catppuccin.css');
+
 .carousel {
     border-radius: 16px 16px 16px 16px;
     overflow: hidden;
 }
 
-p {
-    font-size: 20px;
-  }
+.m-6 {
+    margin: 4rem !important;
+}
 
+
+/* body {
+    color:        var(--ctp-frappe-peach) !important;
+    background-color:   rgb(var(--ctp-macchiato-peach-rgb)) !important;
+} */
+
+
+body {
+    color: #fab387 !important;
+    background-color: #1e1e2e !important;
+}
+
+.footer, .footer-container, .navbar, .navbar-container {
+    color: #cba6f7 !important;
+    background-color: #181825 !important;
+}
+
+h1, h2, h3 {
+    color: #dc8437 !important;
+}
+
+nav .navbar-nav li a{
+    color: #cba6f7  !important;
+}
+
+nav .navbar-nav li a:hover{
+    color: #f5c2e7  !important;
+}
+
+.navbar-brand{
+    color: #cba6f7  !important;
+}
+
+p {
+    font-size: 1.5vw !important;
+}

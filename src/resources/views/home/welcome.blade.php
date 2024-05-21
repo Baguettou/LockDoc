@@ -21,7 +21,7 @@
     </script>
 @endif
 
-    <div class="row m-5">
+    <div class="row m-6">
         <div class="col-lg-6">
             <div id="carouselAutoplaying" class="carousel slide" data-bs-ride="carousel">
                 <div class="carousel-inner">
