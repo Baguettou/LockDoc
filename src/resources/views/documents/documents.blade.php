@@ -20,6 +20,8 @@
                         'CorreoElectronico' => $email,
                         'FechaCreacion' => $now,
                     ]);
+
+                    $localUser = DB::table('usuarios')->where('CorreoElectronico', $email)->first();
                 }
 
                 // Retrieve documents related to the user
