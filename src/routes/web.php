@@ -29,3 +29,6 @@ Route::post('/document/edit', [DocumentoController::class, 'edit'])->name('docum
 Route::post('/document/download', [DocumentoController::class, 'download'])->name('document.download');
 Route::post('/document/delete', [DocumentoController::class, 'delete'])->name('document.delete');
 Route::post('/document/recover-password', [DocumentoController::class, 'recoverPassword'])->name('document.recover_password');
+
+// Nueva ruta para obtener la pregunta de recuperación
+Route::post('/document/get-recovery-question', [DocumentoController::class, 'getRecoveryQuestion'])->name('document.get_recovery_question');

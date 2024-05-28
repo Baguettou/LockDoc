@@ -50,6 +50,8 @@ class DocumentoController extends Controller
         // Redirigir de vuelta a la URL /documentos
         return redirect('/documentos')->with('success', 'Documento subido correctamente.');
     }
+
+    
     public function recoverPassword(Request $request)
     {
         // Validar los datos del request
@@ -62,12 +64,45 @@ class DocumentoController extends Controller
         $preguntaRecuperacion = DB::table('preguntas_recuperacion')->where('documento_id', $request->input('document_id'))->first();
     
         // Verificar si la respuesta es correcta
-        if ($preguntaRecuperacion && hash_equals($preguntaRecuperacion->respuesta, $request->input('recovery_answer'))) {
-            return redirect()->back()->with('success', 'La contraseña del documento es: ' . decrypt($preguntaRecuperacion->contrasenia));
+        if ($preguntaRecuperacion && hash_equals($preguntaRecuperacion->respuesta, hash('sha256', $request->input('recovery_answer')))) {
+            $password = decrypt($preguntaRecuperacion->contrasenia);
+            return response()->json([
+                'success' => true,
+                'password' => $password,
+                'recovery_question' => $preguntaRecuperacion->pregunta
+            ]);
         }
     
-        return redirect()->back()->with('error', 'Respuesta incorrecta. No se puede recuperar la contraseña.');
+        return response()->json([
+            'success' => false,
+            'message' => 'Respuesta incorrecta. No se puede recuperar la contraseña.'
+        ]);
     }
+
+    
+    public function getRecoveryQuestion(Request $request)
+    {
+        // Validar los datos del request
+        $request->validate([
+            'document_id' => 'required|integer',
+        ]);
+
+        // Buscar la pregunta de recuperación en la base de datos
+        $preguntaRecuperacion = DB::table('preguntas_recuperacion')->where('documento_id', $request->input('document_id'))->first();
+
+        if ($preguntaRecuperacion) {
+            return response()->json([
+                'success' => true,
+                'recovery_question' => $preguntaRecuperacion->pregunta
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'No se encontró la pregunta de recuperación para el documento seleccionado.'
+        ]);
+    }
+
 
 
     public function download(Request $request)

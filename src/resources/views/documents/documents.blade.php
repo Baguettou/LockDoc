@@ -144,11 +144,12 @@
                     @csrf
                     <input type="hidden" id="recoveryDocumentId" name="document_id">
                     <div class="form-group">
-                        <label for="recoveryAnswerInput">Respuesta a la pregunta de recuperación:</label>
+                        <label id="recoveryQuestionLabel" for="recoveryAnswerInput">Respuesta a la pregunta de recuperación:</label>
                         <input type="text" class="form-control" id="recoveryAnswerInput" name="recovery_answer" required>
                     </div>
                     <button type="submit" class="btn btn-primary">Recuperar Contraseña</button>
                 </form>
+                <div id="recoveryPasswordResult" class="mt-3"></div>
             </div>
         </div>
     </div>
@@ -203,8 +204,57 @@
         openUploadModalButton.addEventListener('click', function() {
             $('#uploadModal').modal('show');
         });
-    });
 
+        // Manejar la respuesta de recuperación de contraseña
+        recoverPasswordButton.addEventListener('click', function() {
+            const selectedDocumentId = document.querySelector('input[name="selected_document"]:checked').value;
+
+            fetch('{{ route('document.get_recovery_question') }}', {
+                method: 'POST',
+                body: JSON.stringify({ document_id: selectedDocumentId }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    recoveryQuestionLabel.innerText = data.recovery_question;
+                    $('#recoveryModal').modal('show');
+                } else {
+                    recoveryPasswordResult.innerHTML = `<p class="text-danger">${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        recoveryForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(recoveryForm);
+
+            fetch('{{ route('document.recover_password') }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    recoveryPasswordResult.innerHTML = `<p><strong>Contraseña:</strong> ${data.password}</p>`;
+                } else {
+                    recoveryPasswordResult.innerHTML = `<p class="text-danger">${data.message}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
 </script>
 
 <!-- Formularios ocultos para editar y eliminar -->
