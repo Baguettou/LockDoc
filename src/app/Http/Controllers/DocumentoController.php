@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Documento;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Encryption\Encrypter;
 
 class DocumentoController extends Controller
 {
-    
     public function upload(Request $request)
     {
         // Validar que se haya subido un archivo
         $request->validate([
             'documento' => 'required|mimes:pdf|max:10240', // Max 10MB
             'password' => 'required|string',
+            'recovery_question' => 'required|string',
+            'recovery_answer' => 'required|string',
         ]);
 
         $user = auth()->user();
@@ -33,43 +32,68 @@ class DocumentoController extends Controller
         Storage::put($documentoPath, $documentoEncriptado);
 
         // Guardar los datos del documento en la base de datos
-        DB::table('documentos')->insert([
+        $documentoId = DB::table('documentos')->insertGetId([
             'UsuarioID' => $localUser->id,
             'NombreArchivo' => $request->file('documento')->getClientOriginalName(),
             'FechaCarga' => now(),
             'RutaArchivo' => $documentoPath,
         ]);
 
+        // Guardar la pregunta y respuesta de recuperación
+        DB::table('preguntas_recuperacion')->insert([
+            'documento_id' => $documentoId,
+            'pregunta' => $request->input('recovery_question'),
+            'respuesta' => hash('sha256', $request->input('recovery_answer')),
+            'contrasenia' => encrypt($request->input('password')),
+        ]);
+
         // Redirigir de vuelta a la URL /documentos
         return redirect('/documentos')->with('success', 'Documento subido correctamente.');
     }
-
-    public function edit($id)
+    public function recoverPassword(Request $request)
     {
-        // Aquí puedes implementar la lógica para editar el documento
-        // Por ejemplo, podrías redirigir a una vista de edición pasando el documento como parámetro
-        $documento = DB::table('documentos')->where('id', $id)->first();
-        return view('document.edit', compact('documento'));
+        // Validar los datos del request
+        $request->validate([
+            'document_id' => 'required|integer',
+            'recovery_answer' => 'required|string',
+        ]);
+    
+        // Buscar la pregunta de recuperación en la base de datos
+        $preguntaRecuperacion = DB::table('preguntas_recuperacion')->where('documento_id', $request->input('document_id'))->first();
+    
+        // Verificar si la respuesta es correcta
+        if ($preguntaRecuperacion && hash_equals($preguntaRecuperacion->respuesta, $request->input('recovery_answer'))) {
+            return redirect()->back()->with('success', 'La contraseña del documento es: ' . decrypt($preguntaRecuperacion->contrasenia));
+        }
+    
+        return redirect()->back()->with('error', 'Respuesta incorrecta. No se puede recuperar la contraseña.');
     }
 
-    public function download(Request $request, $id)
-    {
-        // Buscar el documento en la base de datos
-        $documento = DB::table('documentos')->where('id', $id)->first();
 
+    public function download(Request $request)
+    {
+        // Validar que se haya proporcionado el ID del documento y la contraseña
+        $request->validate([
+            'document_id' => 'required|integer',
+            'password' => 'required|string',
+        ]);
+    
+        // Buscar el documento en la base de datos
+        $documento = DB::table('documentos')->where('id', $request->input('document_id'))->first();
+    
         // Verificar si el documento existe
         if ($documento) {
             // Obtener la ruta del archivo
             $filePath = storage_path('app/' . $documento->RutaArchivo);
-
+    
             // Verificar si el archivo existe en el almacenamiento
             if (file_exists($filePath)) {
                 // Obtener la contraseña del request
                 $password = $request->input('password');
-
+    
                 // Desencriptar el archivo
                 $decryptedContent = $this->decryptFile($filePath, $password);
-
+    
                 if ($decryptedContent !== false) {
                     // Crear una respuesta HTTP con el contenido desencriptado
                     return response()->streamDownload(function () use ($decryptedContent) {
@@ -79,9 +103,11 @@ class DocumentoController extends Controller
                     // Si la contraseña es incorrecta, redirigir con un mensaje de error
                     return redirect()->back()->with('error', 'Contraseña incorrecta. No se puede descargar el documento.');
                 }
+            } else {
+                return redirect()->back()->with('error', 'Archivo no encontrado en el almacenamiento.');
             }
         }
-
+    
         return redirect()->back()->with('error', 'Documento no encontrado.');
     }
 
@@ -121,25 +147,18 @@ class DocumentoController extends Controller
         return $decryptedContent;
     }
 
-
-    public function delete($id)
+    public function delete(Request $request)
     {
-        // Buscar el documento en la base de datos
-        $documento = DB::table('documentos')->where('id', $id)->first();
+        $documento = DB::table('documentos')->where('id', $request->input('documentId'))->first();
 
-        // Verificar si el documento existe
         if ($documento) {
-            // Eliminar el archivo del almacenamiento
             Storage::delete($documento->RutaArchivo);
 
-            // Eliminar el registro de la base de datos
-            DB::table('documentos')->where('id', $id)->delete();
+            DB::table('documentos')->where('id', $documento->id)->delete();
 
-            // Redirigir con un mensaje de éxito
-            return redirect()->back()->with('success', 'El documento se ha eliminado correctamente.');
+            return redirect()->back()->with('success', 'Documento eliminado correctamente.');
         }
 
-        // Si el documento no existe, redirigir con un mensaje de error
-        return redirect()->back()->with('error', 'El documento no se puede eliminar.');
+        return redirect()->back()->with('error', 'Documento no encontrado.');
     }
 }

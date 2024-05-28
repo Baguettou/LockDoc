@@ -7,9 +7,8 @@ Route::get('/', function () {
     return view('home.welcome');
 });
 
-
 Route::get('/documentos', function () {
-    if (! auth()->check()) {
+    if (!auth()->check()) {
         return redirect('/')->with('products-nologin-alert', 'Necesitas iniciar sesion para ver tus documentos!');
     }
 
@@ -17,18 +16,16 @@ Route::get('/documentos', function () {
 });
 
 Route::get('/subir', function () {
-    if (! auth()->check()) {
+    if (!auth()->check()) {
         return redirect('/')->with('products-nologin-alert', 'Necesitas iniciar sesion para esta opcion!');
     }
 
     return view('documents.subir');
 });
 
-
-
 Route::post('/document/upload', [DocumentoController::class, 'upload'])->name('document.upload');
 
-Route::get('/document/edit/{id}', [DocumentoController::class, 'edit'])->name('document.edit');
-Route::get('/document/download/{id}', [DocumentoController::class, 'download'])->name('document.download');
-Route::get('/document/delete/{id}', [DocumentoController::class, 'delete'])->name('document.delete');
-  
+Route::post('/document/edit', [DocumentoController::class, 'edit'])->name('document.edit');
+Route::post('/document/download', [DocumentoController::class, 'download'])->name('document.download');
+Route::post('/document/delete', [DocumentoController::class, 'delete'])->name('document.delete');
+Route::post('/document/recover-password', [DocumentoController::class, 'recoverPassword'])->name('document.recover_password');

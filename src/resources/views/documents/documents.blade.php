@@ -29,9 +29,7 @@
             @endphp
 
             <h1>Subir Documento</h1>
-            <a href="/subir">
-                <button>Documentos</button>
-            </a>
+            <button id="openUploadModal" class="btn btn-primary">Subir Documento</button>
 
             @if(count($userDocuments) > 0)
                 <h2 class="mt-4">Documentos del Usuario:</h2>
@@ -53,6 +51,7 @@
                             <button id="editButton" class="btn btn-primary" disabled>Editar</button>
                             <button id="downloadButton" class="btn btn-success" disabled>Descargar</button>
                             <button id="deleteButton" class="btn btn-danger" disabled>Eliminar</button>
+                            <button id="recoverPasswordButton" class="btn btn-secondary mt-2" disabled>Recuperar Contraseña</button>
                         </div>
                     </div>
                 </div>
@@ -75,36 +74,80 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="passwordForm">
+                <form id="passwordForm" method="POST" action="{{ route('document.download') }}">
+                    @csrf
+                    <input type="hidden" id="documentId" name="document_id">
                     <div class="form-group">
                         <label for="passwordInput">Contraseña:</label>
-                        <input type="password" class="form-control" id="passwordInput" required>
+                        <input type="password" class="form-control" id="passwordInput" name="password" required>
                     </div>
-                    <button type="submit" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+                    <button type="submit" class="btn btn-primary">Aceptar</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-
 <!-- Modal para subir documentos -->
 <div class="modal fade" id="uploadModal" tabindex="-1" role="dialog" aria-labelledby="uploadModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="uploadModalLabel">Ingrese la contraseña</h5>
+                <h5 class="modal-title" id="uploadModalLabel">Subir Documento</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <form id="uploadForm">
+                <form id="uploadForm" method="POST" action="{{ route('document.upload') }}" enctype="multipart/form-data">
+                    @csrf
                     <div class="form-group">
-                        <label for="uploadInput">Contraseña:</label>
-                        <input type="upload" class="form-control" id="uploadInput" required>
+                        <label for="documentInput">Documento:</label>
+                        <input type="file" class="form-control" id="documentInput" name="documento" required>
                     </div>
-                    <button type="submit" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+                    <div class="form-group">
+                        <label for="uploadPasswordInput">Contraseña:</label>
+                        <input type="password" class="form-control" id="uploadPasswordInput" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recoveryQuestion">Pregunta de recuperación:</label>
+                        <select class="form-control" id="recoveryQuestion" name="recovery_question" required>
+                            <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu primera mascota?</option>
+                            <option value="¿Cuál es tu ciudad de nacimiento?">¿Cuál es tu ciudad de nacimiento?</option>
+                            <option value="¿Cuál es el nombre de tu mejor amigo en la infancia?">¿Cuál es el nombre de tu mejor amigo en la infancia?</option>
+                            <option value="¿Cuál es tu comida favorita?">¿Cuál es tu comida favorita?</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recoveryAnswer">Respuesta:</label>
+                        <input type="text" class="form-control" id="recoveryAnswer" name="recovery_answer" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Subir</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para recuperación de contraseña -->
+<div class="modal fade" id="recoveryModal" tabindex="-1" role="dialog" aria-labelledby="recoveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recoveryModalLabel">Recuperar Contraseña</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="recoveryForm" method="POST" action="{{ route('document.recover_password') }}">
+                    @csrf
+                    <input type="hidden" id="recoveryDocumentId" name="document_id">
+                    <div class="form-group">
+                        <label for="recoveryAnswerInput">Respuesta a la pregunta de recuperación:</label>
+                        <input type="text" class="form-control" id="recoveryAnswerInput" name="recovery_answer" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Recuperar Contraseña</button>
                 </form>
             </div>
         </div>
@@ -117,6 +160,8 @@
         const editButton = document.getElementById('editButton');
         const downloadButton = document.getElementById('downloadButton');
         const deleteButton = document.getElementById('deleteButton');
+        const recoverPasswordButton = document.getElementById('recoverPasswordButton');
+        const openUploadModalButton = document.getElementById('openUploadModal');
         let selectedId = null;
 
         radios.forEach(radio => {
@@ -127,34 +172,49 @@
                 editButton.disabled = !isSelected;
                 downloadButton.disabled = !isSelected;
                 deleteButton.disabled = !isSelected;
+                recoverPasswordButton.disabled = !isSelected;
 
                 if (isSelected) {
                     selectedId = selected.value;
 
                     editButton.onclick = function() {
-                        window.location.href = `{{ url('document/edit') }}/${selectedId}`;
+                        document.getElementById('editDocumentId').value = selectedId;
+                        document.getElementById('editForm').submit();
                     };
                     downloadButton.onclick = function() {
+                        document.getElementById('documentId').value = selectedId;
                         $('#passwordModal').modal('show');
                     };
                     deleteButton.onclick = function() {
                         if (confirm('¿Está seguro de que desea eliminar este documento?')) {
-                            window.location.href = `{{ url('document/delete') }}/${selectedId}`;
+                            document.getElementById('deleteDocumentId').value = selectedId;
+                            document.getElementById('deleteForm').submit();
                         }
+                    };
+                    recoverPasswordButton.onclick = function() {
+                        document.getElementById('recoveryDocumentId').value = selectedId;
+                        $('#recoveryModal').modal('show');
                     };
                 }
             });
         });
 
-        // Manejar el envío del formulario del modal
-        document.getElementById('passwordForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const password = document.getElementById('passwordInput').value;
-            if (password) {
-                window.location.href = `{{ url('document/download') }}/${selectedId}?password=${password}`;
-            }
+        // Abrir el modal de carga de documentos
+        openUploadModalButton.addEventListener('click', function() {
+            $('#uploadModal').modal('show');
         });
     });
+
 </script>
+
+<!-- Formularios ocultos para editar y eliminar -->
+<form id="editForm" method="POST" action="{{ route('document.edit') }}">
+    @csrf
+    <input type="hidden" id="editDocumentId" name="documentId">
+</form>
+<form id="deleteForm" method="POST" action="{{ route('document.delete') }}">
+    @csrf
+    <input type="hidden" id="deleteDocumentId" name="documentId">
+</form>
 
 @endsection
